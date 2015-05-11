@@ -1,0 +1,20 @@
+confused - symlinkfs
+
+Recently at work a NAS product was failing to handle making 25 million+
+symlinks. I decided that it would be fun to make a FUSE overlay file system
+that stored symlink data in memcached. Thus confused was born.
+
+Dependencies:
+    libmemcached
+    fuse
+
+Install:
+    make confused
+
+Running:
+    ./confused <overlay path> -o root=<backing dir> -o memcached="--SERVER=localhost"
+
+Notes:
+I haven't looked into the performance of this at all yet. It's just a fun
+project to help me learn how to make a FUSE filesystem.
+
