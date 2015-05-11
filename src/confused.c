@@ -156,19 +156,21 @@ int cf_mkdir(const char *path, mode_t mode) {
  * Unlink can operate on a symlink so we need to check memcached
  */
 int cf_unlink(const char *path) {
-    char opath[PATH_MAX];
-    overlay_path(path, opath);
     memcached_st *ms = get_or_create_memcached();
-    size_t path_size = strlen(opath);
-    if(memcached_exist(ms, opath, path_size) == MEMCACHED_SUCCESS) {
+    size_t path_size = strlen(path);
+    printf("Unlinking %s\n", path);
+    if(memcached_exist(ms, path, path_size) != MEMCACHED_SUCCESS) {
         // its not in memcache, maybe its on the real fs
+        char opath[PATH_MAX];
+        overlay_path(path, opath);
+        size_t opath_size = strlen(opath);
         if(unlink(opath) == -1) {
             return -errno;
         }
         return 0;
     }
     else {
-        if(memcached_delete(ms, opath, path_size, time(NULL)) == MEMCACHED_SUCCESS) {
+        if(memcached_delete(ms, path, path_size, 0) == MEMCACHED_SUCCESS) {
             return 0;
         }
         else {
@@ -211,6 +213,7 @@ int cf_symlink(const char *path, const char *link) {
     }
     else {
         cf_link_data_t new_link;
+        memset(new_link.link, 0, sizeof(new_link.link));
         strncpy(new_link.link, path, path_size);
         // set up our modes and other file permission shits.
         new_link.stat_buf.st_mode = S_IFLNK | S_IRWXU | S_IRWXG | S_IRWXO;
