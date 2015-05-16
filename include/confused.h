@@ -10,39 +10,8 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include <libmemcached-1.0/memcached.h>
-#include <linux/limits.h>
+#include "cf_types.h"
 
-static pthread_key_t mcd_conn;
-
-/**
- * Custom options for calling fuse
- */
-enum {
-    CF_OPT_ROOT, // location we are overlaying
-    CF_OPT_MCCONF // memcache config string
-};
-
-/**
- * Config struct populated by the arg parser
- */
-typedef struct {
-    char *config_str;
-    size_t config_len;
-    char cwd[PATH_MAX];
-} cf_config_t;
-
-/**
- * Struct for the data we store in memcached for a symlink
- */
-typedef struct {
-    struct stat stat_buf;
-    char link[PATH_MAX];
-    size_t link_size;
-} cf_link_data_t;
-
-static memcached_st *get_or_create_memcached(void);
-static cf_link_data_t *get_link_data(const char *path);
 
 
 int cf_getattr(const char *path, struct stat *stat_buf);
@@ -104,13 +73,16 @@ static struct fuse_operations cf_oper = {
     .unlink = cf_unlink,
     .rmdir = cf_rmdir,
     .symlink = cf_symlink,
+    .open = cf_open,
+    .readdir = cf_readdir,
 /**
     .rename = cf_rename,
     .link = cf_link,
     .chmod = cf_chmod,
     .chown = cf_chown,
     .truncate = cf_truncate,
-    .open = cf_open,
+    */
+    /*
     .read = cf_read,
     .write = cf_write,
     .statfs = cf_statfs,
@@ -124,7 +96,8 @@ static struct fuse_operations cf_oper = {
     .removexattr = cf_removexattr,
 #endif
     .opendir = cf_opendir,
-    .readdir = cf_readdir,
+    **/
+    /**
     .releasedir = cf_releasedir,
     .fsyncdir = cf_fsyncdir,
     .access = cf_access,

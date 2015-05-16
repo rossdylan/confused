@@ -1,6 +1,6 @@
 PREFIX ?= /usr/local
 
-CFLAGS += -std=c99 -Wall -Wextra -fPIC -pedantic
+CFLAGS += -std=c99 -ggdb -Wall -Wextra -fPIC -pedantic
 CFLAGS += $(shell pkg-config --cflags-only-other fuse libmemcached)
 CPPFLAGS += -I./include
 CPPFLAGS += $(shell pkg-config --cflags-only-I fuse libmemcached)
@@ -13,7 +13,7 @@ endif
 
 LDLIBS += $(shell pkg-config --libs fuse libmemcached)
 VPATH := src
-OBJS := confused.o
+OBJS := confused.o cf_dirlist.o cf_link.o cf_mcd.o
 EXECUTABLE := confused
 
 $(OBJS): %.o: src/%.c
