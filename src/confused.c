@@ -69,9 +69,8 @@ int cf_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
             memset(&st, 0, sizeof(st));
             st.st_ino = prev->stat_buf.st_ino;
             st.st_mode = prev->stat_buf.st_mode;
-            char trimmed[PATH_MAX];
-            memcpy(trimmed, &prev_link[1], strlen(prev_link));
-            if(filler(buf, trimmed, &st, 0)) {
+            char *base = basename(prev_link);
+            if(filler(buf, base, &st, 0)) {
                 free(prev);
                 prev = NULL;
                 break;
