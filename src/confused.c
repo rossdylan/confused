@@ -309,7 +309,9 @@ int cf_open(const char *path, struct fuse_file_info *fi) {
  
 
 /**
- * I've borrowed this from overlayfs-fuse. 
+ * I've borrowed this from unionfs-fuse.
+ * https://github.com/rpodgorny/unionfs-fuse/blob/master/src/opts.c
+ * I've modified it slightly in order to make it work on osx as well.
  */
 static char *get_opt_str(const char *arg, char *opt_name) {
     char *loc = strchr(arg, '=');
