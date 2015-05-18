@@ -51,6 +51,7 @@ int cf_create(const char *path, mode_t mode, struct fuse_file_info *fi);
 int cf_ftruncate(const char *path, off_t offset, struct fuse_file_info *fi);
 int cf_fgetattr(const char *path, struct stat *statbuf, struct fuse_file_info *fi);
 
+static void cf_clock_gettime(struct timespec *ts);
 void *cf_init(struct fuse_conn_info *conn);
 void cf_destroy(void *userdata);
 int cf_opt_parse(void *data, const char *arg, int key, struct fuse_args *outargs);

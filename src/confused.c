@@ -9,7 +9,29 @@
 #include "cf_dirlist.h"
 #include "cf_link.h"
 #include "cf_mcd.h"
+#include <syslog.h>
 
+#ifdef __APPLE__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
+/**
+ * Since apple is dumb, we need to make a wrapper in order to get time
+ * in a cross platform way.
+ */
+static void cf_clock_gettime(struct timespec *ts) {
+#ifdef __APPLE__
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    mach_port_deallocate(mach_task_self(), cclock);
+    ts->tv_sec = mts.tv_sec;
+    ts->tv_nsec = mts.tv_nsec;
+#else
+    clock_gettime(CLOCK_REALTIME, ts);
+#endif
+}
 
 /**
  * Translate a path within the overlay back into a path within the root
@@ -63,7 +85,6 @@ int cf_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
         memset(prev_link, 0, sizeof(prev_link));
         memcpy(prev_link, dirlist->head, strlen(dirlist->head)+1);
 
-        cf_link_t *current = NULL;
         struct stat st;
         for(size_t index=0; index<dirlist->size; index++) {
             memset(&st, 0, sizeof(st));
@@ -232,10 +253,17 @@ int cf_symlink(const char *path, const char *link) {
         new_link.stat_buf.st_gid = getgid();
         struct timespec ts;
         size_t ts_size = sizeof(ts);
-        clock_gettime(CLOCK_REALTIME, &ts);
+        cf_clock_gettime(&ts);
+
+#ifdef __APPLE__
+        memcpy(&new_link.stat_buf.st_atime, &ts, ts_size);
+        memcpy(&new_link.stat_buf.st_mtime, &ts, ts_size);
+        memcpy(&new_link.stat_buf.st_ctime, &ts, ts_size);
+#else
         memcpy(&new_link.stat_buf.st_atim, &ts, ts_size);
         memcpy(&new_link.stat_buf.st_mtim, &ts, ts_size);
         memcpy(&new_link.stat_buf.st_ctim, &ts, ts_size);
+#endif
 
         if(cf_link_set(link, &new_link)) {
             printf("I made a symlink %s\n", new_link.target);
@@ -284,39 +312,38 @@ int cf_open(const char *path, struct fuse_file_info *fi) {
  * I've borrowed this from overlayfs-fuse. 
  */
 static char *get_opt_str(const char *arg, char *opt_name) {
-        char *str = index(arg, '=');
-        if (!str) {
-                fprintf(stderr,
-                        "-o %s parameter not properly specified, aborting!\n",
-                        opt_name);
-                exit(1); // still early phase, we can abort
-        }
-        if (strlen(str) < 3) {
-                fprintf(stderr,
-                        "%s path has not sufficient characters, aborting!\n",
-                        opt_name);
-                exit(1);
-        }
-        str++; // just jump over the '='
-        // copy of the given parameter, just in case something messes around
-        // with command line parameters later on
-        str = strdup(str);
-        if (!str) {
-                fprintf(stderr, "strdup failed: %s Aborting!\n", strerror(errno));
-                exit(1);
-        }
-        return str;
+    char *loc = strchr(arg, '=');
+    if (!loc) {
+        fprintf(stderr,
+                "-o %s parameter not properly specified, aborting!\n",
+                opt_name);
+        exit(1); // still early phase, we can abort
+    }
+    if (strlen(loc) < 3) {
+        fprintf(stderr,
+                "%s path has not sufficient characters, aborting!\n",
+                opt_name);
+        exit(1);
+    }
+    loc++; // just jump over the '='
+    // copy of the given parameter, just in case something messes around
+    // with command line parameters later on
+    loc = strdup(loc);
+    if (!loc) {
+        fprintf(stderr, "strdup failed: %s Aborting!\n", strerror(errno));
+        exit(1);
+    }
+    return loc;
 }
 
 
 int cf_opt_parse(void *data, const char *arg, int key, struct fuse_args *outargs) {
     cf_config_t *config = (cf_config_t *)data;
-    int res = 0;
     size_t arg_len = strlen(arg) + 1; //+1 for \0
     if(key == CF_OPT_ROOT) {
         char *thing = get_opt_str(arg, "root");
         realpath(thing, config->cwd);
-        printf("I'm expanding %s\n", arg);
+        printf("I'm expanding %s -> %s\n", arg, config->cwd);
         return 0;
     }
     if(key == CF_OPT_MCCONF) {
