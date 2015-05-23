@@ -56,6 +56,9 @@ static void overlay_path(const char *path, char *overlay) {
  * Reuturn an array containing all links in a cf_dirent
  */
 int cf_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+    (void)offset;
+    (void)fi;
+
     char opath[PATH_MAX];
     memset(opath, 0, sizeof(opath));
     overlay_path(path, opath);
@@ -340,6 +343,8 @@ static char *get_opt_str(const char *arg, char *opt_name) {
 
 
 int cf_opt_parse(void *data, const char *arg, int key, struct fuse_args *outargs) {
+    (void)outargs;
+
     cf_config_t *config = (cf_config_t *)data;
     size_t arg_len = strlen(arg) + 1; //+1 for \0
     if(key == CF_OPT_ROOT) {
